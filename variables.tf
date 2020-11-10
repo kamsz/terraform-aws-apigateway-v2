@@ -52,6 +52,12 @@ variable "create_vpc_link" {
   default     = false
 }
 
+variable "create_authorizers" {
+  description = "Whether to create authorizers"
+  type        = bool
+  default     = false
+}
+
 # API Gateway
 variable "name" {
   description = "The name of the API"
@@ -186,5 +192,14 @@ variable "subnet_ids" {
 variable "vpc_link_tags" {
   description = "A map of tags to add to the VPC Link"
   type        = map(string)
+  default     = {}
+}
+
+####
+# authorizers
+
+variable "authorizers" {
+  description = "Map of authorizers"
+  type        = map(any)
   default     = {}
 }

@@ -104,13 +104,39 @@ resource "aws_apigatewayv2_api_mapping" "this" {
   stage       = aws_apigatewayv2_stage.default[0].id
 }
 
+# Authorizers
+resource "aws_apigatewayv2_authorizer" "this" {
+  for_each = var.create && var.create_authorizers ? var.authorizers : {}
+
+  api_id                            = aws_apigatewayv2_api.this[0].id
+  authorizer_type                   = each.value.authorizer_type
+  name                              = each.key
+  authorizer_credentials_arn        = lookup(each.value, "authorizer_credentials_arn", null)
+  authorizer_payload_format_version = lookup(each.value, "authorizer_payload_format_version", null)
+  authorizer_result_ttl_in_seconds  = lookup(each.value, "authorizer_result_ttl_in_seconds", null)
+  authorizer_uri                    = lookup(each.value, "authorizer_uri", null)
+  enable_simple_responses           = lookup(each.value, "enable_simple_responses", null)
+  identity_sources                  = lookup(each.value, "identity_sources", null)
+
+  dynamic "jwt_configuration" {
+    for_each = lookup(each.value, "jwt_configuration", [])
+
+    content {
+      audience = jwt_configuration.value.audience
+      issuer   = jwt_configuration.value.issuer
+    }
+  }
+}
+
 # Routes and integrations
 resource "aws_apigatewayv2_route" "this" {
   for_each = var.create && var.create_routes_and_integrations ? var.integrations : {}
 
-  api_id    = aws_apigatewayv2_api.this[0].id
-  route_key = each.key
-  target    = "integrations/${aws_apigatewayv2_integration.this[each.key].id}"
+  api_id             = aws_apigatewayv2_api.this[0].id
+  route_key          = each.key
+  target             = "integrations/${aws_apigatewayv2_integration.this[each.key].id}"
+  authorization_type = lookup(each.value, "authorization_type", null)
+  authorizer_id      = var.create_authorizers && contains(keys(var.authorizers), each.value.authorizer_name) ? aws_apigatewayv2_authorizer.this[each.value.authorizer_name].id : null
 }
 
 resource "aws_apigatewayv2_integration" "this" {
@@ -126,6 +152,8 @@ resource "aws_apigatewayv2_integration" "this" {
 
   payload_format_version = lookup(each.value, "payload_format_version", null)
   timeout_milliseconds   = lookup(each.value, "timeout_milliseconds", null)
+
+  request_parameters = lookup(each.value, "request_parameters", null)
 
   # Due to open issue - https://github.com/terraform-providers/terraform-provider-aws/issues/11148#issuecomment-619160589
   # Bug in terraform-aws-provider with perpetual diff
