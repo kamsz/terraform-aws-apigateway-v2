@@ -147,6 +147,7 @@ resource "aws_apigatewayv2_integration" "this" {
   description      = lookup(each.value, "description", null)
 
   connection_type    = lookup(each.value, "connection_type", "INTERNET")
+  connection_id      = var.create_vpc_link ? aws_apigatewayv2_vpc_link.this[0].id : null
   integration_method = lookup(each.value, "integration_method", "ANY") # Q: Where this is used in API gateway? I can't see it in UI.
   integration_uri    = lookup(each.value, "lambda_arn", null)
 
